@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento via PIX</title>
+    <style>
+        /* Estilos gerais da página */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Container principal */
+        .payment-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        h1, h2, p {
+            color: #333;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-top: 0;
+        }
+
+        .price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0 20px 0;
+        }
+
+        /* Estilos do QR Code */
+        .qr-code {
+            margin: 20px auto;
+            border: 6px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px;
+            max-width: 250px;
+        }
+        .qr-code img {
+            width: 100%;
+            display: block;
+        }
+
+        /* Estilos dos Botões */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin-top: 15px;
+        }
+        .btn-copy {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-copy:hover {
+            background-color: #0056b3;
+        }
+        .btn-paid {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-paid:hover {
+            background-color: #218838;
+        }
+        .btn-redirect {
+            background-color: #ffc107;
+            color: #212529;
+            text-decoration: none;
+        }
+        .btn-redirect:hover {
+            background-color: #e0a800;
+        }
+
+        /* Estado de Aguardando Confirmação */
+        .waiting-container p {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+        .timer {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        /* Utilitário para esconder elementos */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="payment-container">
+        <!-- SEÇÃO 1: EXIBIÇÃO DO PIX (VISÍVEL NO INÍCIO) -->
+        <div id="pixSection">
+            <h1>Pague com PIX para liberar seu acesso!</h1>
+            <p>Valor a pagar:</p>
+            <div class="price">R$ 19,90</div>
+            
+            <div class="qr-code">
+                <img id="qrCodeImg" src="" alt="QR Code PIX">
+            </div>
+
+            <button class="btn btn-copy" id="copyPixBtn">
+                Copiar Código PIX
+            </button>
+            <button class="btn btn-paid" id="paidBtn">
+                Já Paguei
+            </button>
+        </div>
+
+        <!-- SEÇÃO 2: AGUARDANDO PAGAMENTO (ESCONDIDA) -->
+        <div id="waitingSection" class="hidden">
+            <h2>Aguardando Confirmação</h2>
+            <p>Não feche esta página. Estamos a verificar o seu pagamento.</p>
+            <div class="timer" id="timerDisplay">03:00</div>
+        </div>
+        
+        <!-- SEÇÃO 3: ACESSO LIBERADO (ESCONDIDA) -->
+        <div id="successSection" class="hidden">
+            <h2>Pagamento Confirmado!</h2>
+            <p>O seu acesso foi liberado. Clique no botão abaixo para aceder ao conteúdo.</p>
+            <a href="https://t.me/+c_Wu4-8OXqJhNzQx" class="btn btn-redirect">
+                Aceder ao Conteúdo
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURAÇÃO ---
+            const pixCode = "00020126580014BR.GOV.BCB.PIX01363870150e-9914-475a-8c69-169078443a12520400005303986540519.905802BR592558.741.945 CAROLINE DOS S6009SAO PAULO61080540900062250521mNiadhkBwkvAl6c4wx5vy630485A3";
+            const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixCode)}`;
+            const countdownTimeInSeconds = 60; // 1 minutos
+
+            // --- SELEÇÃO DE ELEMENTOS ---
+            const qrCodeImg = document.getElementById('qrCodeImg');
+            const copyPixBtn = document.getElementById('copyPixBtn');
+            const paidBtn = document.getElementById('paidBtn');
+            const timerDisplay = document.getElementById('timerDisplay');
+            
+            const pixSection = document.getElementById('pixSection');
+            const waitingSection = document.getElementById('waitingSection');
+            const successSection = document.getElementById('successSection');
+            
+            let timerInterval;
+
+            // --- INICIALIZAÇÃO ---
+            // Gera a imagem do QR Code
+            qrCodeImg.src = qrCodeApiUrl;
+
+            // --- FUNÇÕES ---
+            // Função para copiar o código PIX
+            function copyPixCode() {
+                navigator.clipboard.writeText(pixCode).then(() => {
+                    copyPixBtn.textContent = 'Copiado!';
+                    setTimeout(() => {
+                        copyPixBtn.textContent = 'Copiar Código PIX';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Erro ao copiar o código: ', err);
+                    alert('Não foi possível copiar o código. Por favor, selecione e copie manualmente.');
+                });
+            }
+
+            // Função para iniciar o contador
+            function startTimer() {
+                let timer = countdownTimeInSeconds;
+                
+                function updateDisplay() {
+                    const minutes = Math.floor(timer / 60);
+                    const seconds = timer % 60;
+                    // Formata para ter sempre dois dígitos (ex: 03:09)
+                    timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+
+                updateDisplay(); // Mostra o tempo inicial
+
+                timerInterval = setInterval(() => {
+                    timer--;
+                    updateDisplay();
+                    if (timer <= 0) {
+                        clearInterval(timerInterval);
+                        showSuccess();
+                    }
+                }, 1000);
+            }
+            
+            // Função para mostrar a tela de sucesso
+            function showSuccess() {
+                waitingSection.classList.add('hidden');
+                successSection.classList.remove('hidden');
+            }
+
+            // --- EVENT LISTENERS ---
+            // Clique no botão de copiar
+            copyPixBtn.addEventListener('click', copyPixCode);
+
+            // Clique no botão "Já Paguei"
+            paidBtn.addEventListener('click', () => {
+                pixSection.classList.add('hidden');
+                waitingSection.classList.remove('hidden');
+                startTimer();
+            });
+        });
+    </script>
+
+</body>
+</html>
